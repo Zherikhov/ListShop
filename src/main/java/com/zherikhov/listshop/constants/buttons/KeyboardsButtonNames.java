@@ -8,15 +8,15 @@ public class KeyboardsButtonNames {
     private final List<String> keyboardRowFirst = new ArrayList<>();
 
     {
-        keyboardRowFirst.add("Составить список");
-        keyboardRowFirst.add("Добавить контакт");
+        keyboardRowFirst.add("Make a list");
+        keyboardRowFirst.add("Add a contact");
     }
 
     private final List<String> keyboardRowSecond = new ArrayList<>();
 
     {
-        keyboardRowSecond.add("Обратная связь");
-        keyboardRowSecond.add("О боте");
+        keyboardRowSecond.add("Feedback");
+        keyboardRowSecond.add("About Bot");
     }
 
     public List<List<String>> keyboardRows = new ArrayList<>();

@@ -1,11 +1,10 @@
 package com.zherikhov.listshop.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.util.List;
 
 @Getter
 @Setter
@@ -26,6 +25,9 @@ public class Subscriber {
     @Column(name = "last_name")
     private String lastName;
 
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "subscriber")
+    private List<Contact> contacts;
+
     public Subscriber(long id, String userName, String firstName, String lastName) {
         this.id = id;
         this.userName = userName;
@@ -34,5 +36,15 @@ public class Subscriber {
     }
 
     public Subscriber() {
+    }
+
+    @Override
+    public String toString() {
+        return "Subscriber{" +
+                "id=" + id +
+                ", userName='" + userName + '\'' +
+                ", firstName='" + firstName + '\'' +
+                ", lastName='" + lastName + '\'' +
+                '}';
     }
 }

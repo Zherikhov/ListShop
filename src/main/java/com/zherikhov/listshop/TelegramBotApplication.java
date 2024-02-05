@@ -1,44 +1,68 @@
 package com.zherikhov.listshop;
 
 import com.zherikhov.listshop.commands.Commands;
-import com.zherikhov.listshop.dao.SubscriberRepository;
 import com.zherikhov.listshop.entity.Subscriber;
 import com.zherikhov.listshop.service.SubscriberService;
 import com.zherikhov.listshop.utils.Check;
 import com.zherikhov.listshop.utils.Resources;
 import lombok.SneakyThrows;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.extern.slf4j.Slf4j;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.User;
 
+@Slf4j
 public class TelegramBotApplication extends TelegramLongPollingBot {
     private final Commands startCommand = new Commands();
 
-//    private SubscriberService service;
+    private final SubscriberService service;
 
-    public TelegramBotApplication(String botToken) {
+    public TelegramBotApplication(String botToken, SubscriberService service) {
         super(botToken);
+        this.service = service;
     }
 
     @SneakyThrows
     @Override
     public void onUpdateReceived(Update update) {
+        User user = update.getMessage().getFrom();
+
         String command = Check.checkCommand(update.getMessage());
-        if (!command.isEmpty()) {
+        if (command != null) {
             switch (command) {
                 case "/start" -> {
-                    execute(startCommand.start(update));
-//                    service.save(new Subscriber(10005, "q", "w", "e"));
+                    log.info("/start -> " + user.getId());
 
+                    if (service.findById(user.getId()) == null) {
+                        service.save(new Subscriber(user.getId(), user.getUserName(), user.getFirstName(), user.getLastName()));
+                    }
+                    execute(startCommand.start(update));
                 }
                 case "/help" -> {
-
+                    log.info("/help -> " + user.getId());
                 }
             }
             return;
         }
-        System.out.println("!");
+
+        if (update.hasMessage() && update.getMessage().hasText()) {
+            switch (update.getMessage().getText()) {
+                case "Make a list" -> {
+                    log.info("Make a list");
+                }
+                case "Add a contact" -> {
+                    log.info("Add a contact");
+                }
+                case "Feedback" -> {
+                    log.info("Feedback");
+                }
+                case "About Bot" -> {
+                    log.info("About Bot");
+                }
+            }
+        }
     }
+
 
     @Override
     public String getBotUsername() {
