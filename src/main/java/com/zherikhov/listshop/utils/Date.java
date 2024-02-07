@@ -1,0 +1,12 @@
+package com.zherikhov.listshop.utils;
+
+import java.text.SimpleDateFormat;
+import java.util.TimeZone;
+
+public class Date {
+    public static String getSourceDate() {
+        TimeZone.setDefault(TimeZone.getTimeZone("Europe/Moscow"));
+        SimpleDateFormat formatter = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
+        return formatter.format(new java.util.Date());
+    }
+}

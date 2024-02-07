@@ -3,7 +3,9 @@ package com.zherikhov.listshop.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
 
+import java.sql.Timestamp;
 import java.util.List;
 
 @Getter
@@ -28,14 +30,18 @@ public class Subscriber {
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "subscriber")
     private List<Contact> contacts;
 
+    @CreationTimestamp
+    @Column(name = "created", columnDefinition="TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    private Timestamp created;
+
+    public Subscriber() {
+    }
+
     public Subscriber(long id, String userName, String firstName, String lastName) {
         this.id = id;
         this.userName = userName;
         this.firstName = firstName;
         this.lastName = lastName;
-    }
-
-    public Subscriber() {
     }
 
     @Override

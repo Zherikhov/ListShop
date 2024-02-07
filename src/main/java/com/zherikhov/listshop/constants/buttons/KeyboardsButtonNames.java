@@ -1,28 +1,21 @@
 package com.zherikhov.listshop.constants.buttons;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class KeyboardsButtonNames {
 
-    private final List<String> keyboardRowFirst = new ArrayList<>();
+    private static final List<String> KEYBOARD_ROW_FIRST = List.of(
+            "Make a list",
+            "Add a contact"
+    );
 
-    {
-        keyboardRowFirst.add("Make a list");
-        keyboardRowFirst.add("Add a contact");
-    }
+    private static final List<String> KEYBOARD_ROW_SECOND = List.of(
+            "Feedback",
+            "About Bot"
+    );
 
-    private final List<String> keyboardRowSecond = new ArrayList<>();
-
-    {
-        keyboardRowSecond.add("Feedback");
-        keyboardRowSecond.add("About Bot");
-    }
-
-    public List<List<String>> keyboardRows = new ArrayList<>();
-
-    {
-        keyboardRows.add(keyboardRowFirst);
-        keyboardRows.add(keyboardRowSecond);
-    }
+    public static final List<List<String>> keyboardRows = List.of(
+            KEYBOARD_ROW_FIRST,
+            KEYBOARD_ROW_SECOND
+    );
 }

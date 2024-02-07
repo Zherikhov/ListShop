@@ -24,4 +24,13 @@ public class Contact {
 
     @Column(name = "user_name")
     private String userName;
+
+    public Contact() {
+    }
+
+    public Contact(Subscriber subscriber, String nickName, String userName) {
+        this.subscriber = subscriber;
+        this.nickName = nickName;
+        this.userName = userName;
+    }
 }

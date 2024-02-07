@@ -40,4 +40,15 @@ public class SubscriberService {
         }
         return subscriber;
     }
+
+    public Subscriber findByUserName(String userName) {
+        Subscriber subscriber = null;
+        Optional<Subscriber> optionalSubscriber = repository.findByUserName(userName);
+
+        if (optionalSubscriber.isPresent()) {
+            subscriber = optionalSubscriber.get();
+            log.info(subscriber.toString());
+        }
+        return subscriber;
+    }
 }
