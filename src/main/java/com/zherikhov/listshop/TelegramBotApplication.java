@@ -12,6 +12,7 @@ import com.zherikhov.listshop.service.ContactService;
 import com.zherikhov.listshop.service.SubscriberService;
 import com.zherikhov.listshop.utils.Check;
 import com.zherikhov.listshop.utils.Resources;
+import com.zherikhov.listshop.utils.TextFormat;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -61,6 +62,10 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
 
         if (update.hasMessage() && update.getMessage().hasText() && currentSubscriberProperties.isAddContact()) {
             addContact(update, user ,currentSubscriberProperties);
+        }
+
+        if (update.hasMessage() && update.getMessage().hasText() && currentSubscriberProperties.isFeedback()) {
+            feedback(update ,currentSubscriberProperties);
         }
 
         String command = Check.checkCommand(update.getMessage());
@@ -116,6 +121,7 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
         return null;
     }
 
+    @SneakyThrows
     public void makeList(Update update, User user, SubscriberProperties currentSubscriberProperties) {
         if (!currentSubscriberProperties.isWaitNickName() && subscriber == null) { //TODO:
             subscriber = subscriberService.findByUserName(update.getMessage().getText());
@@ -125,7 +131,8 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
     @SneakyThrows
     public void addContact(Update update, User user, SubscriberProperties currentSubscriberProperties) {
         if (!currentSubscriberProperties.isWaitNickName() && subscriber == null) {
-            subscriber = subscriberService.findByUserName(update.getMessage().getText());
+            String userName = update.getMessage().getText();
+            subscriber = subscriberService.findByUserName(TextFormat.userNameFormat(userName));
         }
 
         if (subscriber != null && !currentSubscriberProperties.isWaitNickName()) {
@@ -148,6 +155,13 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
 
         execute(sendMessageController.createMessage(update, Messages.NOT_FOUND_NICK_NAME));
         currentSubscriberProperties.setAddContact(false);
+    }
+
+    @SneakyThrows
+    public void feedback(Update update, SubscriberProperties currentSubscriberProperties) {
+        execute(sendMessageController.createMessageForSupport(update.getMessage().getText()));
+        currentSubscriberProperties.setFeedback(false);
+        execute(sendMessageController.createMessage(update, Messages.FEEDBACK2));
     }
 
     @Override
