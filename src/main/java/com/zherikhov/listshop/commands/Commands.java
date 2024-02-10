@@ -1,6 +1,6 @@
 package com.zherikhov.listshop.commands;
 
-import com.zherikhov.listshop.constants.buttons.KeyboardsButtonNames;
+import com.zherikhov.listshop.constants.button.KeyboardsButtonNames;
 import com.zherikhov.listshop.content.CustomKeyboardButton;
 import org.telegram.telegrambots.meta.api.methods.ParseMode;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;

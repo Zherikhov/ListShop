@@ -16,7 +16,7 @@ public class Contact {
     private int id;
 
     @ManyToOne
-    @JoinColumn(name = "id_contact")
+    @JoinColumn(name = "id_subscriber")
     private Subscriber subscriber;
 
     @Column(name = "nick_name")

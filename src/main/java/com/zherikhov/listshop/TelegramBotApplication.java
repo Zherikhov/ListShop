@@ -1,15 +1,14 @@
 package com.zherikhov.listshop;
 
-import com.zherikhov.listshop.bufferClasses.SubscriberProperties;
 import com.zherikhov.listshop.commands.Commands;
-import com.zherikhov.listshop.commands.InlineKeyButtonService;
+import com.zherikhov.listshop.service.button.InlineKeyButtonService;
 import com.zherikhov.listshop.commands.SendMessageController;
-import com.zherikhov.listshop.constants.buttons.InlineButtonsNames;
+import com.zherikhov.listshop.constants.button.InlineButtonsNames;
 import com.zherikhov.listshop.constants.text.Messages;
 import com.zherikhov.listshop.entity.Contact;
 import com.zherikhov.listshop.entity.Subscriber;
-import com.zherikhov.listshop.service.ContactService;
-import com.zherikhov.listshop.service.SubscriberService;
+import com.zherikhov.listshop.service.db.ContactService;
+import com.zherikhov.listshop.service.db.SubscriberService;
 import com.zherikhov.listshop.utils.Check;
 import com.zherikhov.listshop.utils.Resources;
 import com.zherikhov.listshop.utils.TextFormat;
@@ -19,8 +18,8 @@ import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.User;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Slf4j
 public class TelegramBotApplication extends TelegramLongPollingBot {
@@ -28,10 +27,8 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
 
     private final SubscriberService subscriberService;
     private final ContactService contactService;
-    private Subscriber subscriber = null;
 
     private final SendMessageController sendMessageController = new SendMessageController();
-    private final List<SubscriberProperties> subscribers = new ArrayList<>();
     private final InlineKeyButtonService inlineKeyButtonService = new InlineKeyButtonService();
 
     public TelegramBotApplication(String botToken, SubscriberService service, ContactService contactService) {
@@ -44,28 +41,24 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
     @Override
     public void onUpdateReceived(Update update) {
         User user = update.getMessage().getFrom();
-        SubscriberProperties currentSubscriberProperties;
 
-        if (findSubscriber(subscribers, user) != null) {
-            currentSubscriberProperties = findSubscriber(subscribers, user);
-            log.info("Was found a subscriber from SUBSCRIBERS: " + currentSubscriberProperties.getId() + " " + user.getUserName());
-        } else {
-            currentSubscriberProperties = new SubscriberProperties(user.getId());
-            currentSubscriberProperties.setId(user.getId());
-            subscribers.add(currentSubscriberProperties);
-            log.info("Added a subscriber to SUBSCRIBERS: " + currentSubscriberProperties.getId() + " " + user.getUserName());
+        if (subscriberService.findById(user.getId()) == null) {
+            subscriberService.save(new Subscriber(user.getId(), user.getUserName(), user.getFirstName(), user.getLastName()));
         }
+        Subscriber subscriber = subscriberService.findById(user.getId());
 
-        if(update.hasMessage() && update.getMessage().hasText() && currentSubscriberProperties.isMakeList()) {
-            makeList(update, user ,currentSubscriberProperties);
-        }
+        if (subscriber != null) {
+            if (update.hasMessage() && update.getMessage().hasText() && subscriber.getMakeListStep() != 0) {
+                makeList(update, subscriber);
+            }
+//
+            if (update.hasMessage() && update.getMessage().hasText() && subscriber.getAddContactStep() != 0) {
+                addContact(update, subscriber);
+            }
 
-        if (update.hasMessage() && update.getMessage().hasText() && currentSubscriberProperties.isAddContact()) {
-            addContact(update, user ,currentSubscriberProperties);
-        }
-
-        if (update.hasMessage() && update.getMessage().hasText() && currentSubscriberProperties.isFeedback()) {
-            feedback(update ,currentSubscriberProperties);
+            if (update.hasMessage() && update.getMessage().hasText() && subscriber.getFeedbackStep() != 0) {
+                feedback(update, subscriber);
+            }
         }
 
         String command = Check.checkCommand(update.getMessage());
@@ -90,18 +83,24 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
             switch (update.getMessage().getText()) {
                 case "Make a list" -> {
                     log.info("Make a list from " + user.getUserName());
-                    currentSubscriberProperties.setMakeList(true);
+
+                    Objects.requireNonNull(subscriber).setMakeListStep(1);
+                    subscriberService.save(subscriber);
                     execute(inlineKeyButtonService.setInlineButton(update, "Please select a list", InlineButtonsNames.LIST_NAMES));
                 }
                 case "Add a contact" -> {
                     log.info("Add a contact from " + user.getUserName());
-                    currentSubscriberProperties.setAddContact(true);
+
+                    Objects.requireNonNull(subscriber).setAddContactStep(1);
+                    subscriberService.save(subscriber);
                     execute(sendMessageController.createMessage(update, Messages.ADD_A_CONTACT));
 
                 }
                 case "Feedback" -> {
                     log.info("Feedback from " + user.getUserName());
-                    currentSubscriberProperties.setFeedback(true);
+
+                    Objects.requireNonNull(subscriber).setFeedbackStep(1);
+                    subscriberService.save(subscriber);
                     execute(sendMessageController.createMessage(update, Messages.FEEDBACK));
                 }
                 case "About Bot" -> {
@@ -112,8 +111,8 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
         }
     }
 
-    public SubscriberProperties findSubscriber(List<SubscriberProperties> subscribers, User user) {
-        for (SubscriberProperties subscriber : subscribers) {
+    public Subscriber findSubscriber(List<Subscriber> subscribers, User user) {
+        for (Subscriber subscriber : subscribers) {
             if (subscriber.getId() == user.getId()) {
                 return subscriber;
             }
@@ -122,45 +121,44 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
     }
 
     @SneakyThrows
-    public void makeList(Update update, User user, SubscriberProperties currentSubscriberProperties) {
-        if (!currentSubscriberProperties.isWaitNickName() && subscriber == null) { //TODO:
-            subscriber = subscriberService.findByUserName(update.getMessage().getText());
+    public void makeList(Update update, Subscriber subscriber) {
+        if (subscriber.getMakeListStep() == 1) {
+//            execute(inlineKeyButtonService.setInlineButton(update, "test", InlineButtonsNames.LIST_NAMES));
         }
     }
 
     @SneakyThrows
-    public void addContact(Update update, User user, SubscriberProperties currentSubscriberProperties) {
-        if (!currentSubscriberProperties.isWaitNickName() && subscriber == null) {
-            String userName = update.getMessage().getText();
-            subscriber = subscriberService.findByUserName(TextFormat.userNameFormat(userName));
-        }
+    public void addContact(Update update, Subscriber subscriber) {
+        if (subscriber.getAddContactStep() == 1) {
+            String userName = TextFormat.userNameFormat(update.getMessage().getText());
+            Subscriber checkSubscriber = subscriberService.findByUserName(userName);
 
-        if (subscriber != null && !currentSubscriberProperties.isWaitNickName()) {
-            execute(sendMessageController.createMessage(update, Messages.WAIT_CONTACT));
-            currentSubscriberProperties.setWaitNickName(true);
-            return;
-        }
-
-        if (currentSubscriberProperties.isWaitNickName()) {
-            Contact contact = new Contact(subscriberService.findById(user.getId()), update.getMessage().getText(), subscriber.getUserName());
+            if (checkSubscriber != null) {
+                subscriber.setAddContactStep(2);
+                subscriberService.save(subscriber);
+                execute(sendMessageController.createMessage(update, Messages.WAIT_CONTACT));
+            } else {
+                subscriber.setAddContactStep(0);
+                subscriberService.save(subscriber);
+                execute(sendMessageController.createMessage(update, Messages.NOT_FOUND_NICK_NAME));
+            }
+        } else if (subscriber.getAddContactStep() == 2) {
+            Contact contact = new Contact(subscriber, update.getMessage().getText(), subscriber.getUserName());
             contactService.save(contact);
-            currentSubscriberProperties.setWaitNickName(false);
-            currentSubscriberProperties.setAddContact(false);
-            subscriber = null;
+
+            subscriber.setAddContactStep(0);
+            subscriberService.save(subscriber);
 
             execute(sendMessageController.createMessage(update, Messages.WAIT_NICK_NAME));
-            log.info("Contact was created for " + currentSubscriberProperties.getId());
-            return;
         }
-
-        execute(sendMessageController.createMessage(update, Messages.NOT_FOUND_NICK_NAME));
-        currentSubscriberProperties.setAddContact(false);
     }
 
     @SneakyThrows
-    public void feedback(Update update, SubscriberProperties currentSubscriberProperties) {
+    public void feedback(Update update, Subscriber subscriber) {
         execute(sendMessageController.createMessageForSupport(update.getMessage().getText()));
-        currentSubscriberProperties.setFeedback(false);
+
+        subscriber.setFeedbackStep(0);
+        subscriberService.save(subscriber);
         execute(sendMessageController.createMessage(update, Messages.FEEDBACK2));
     }
 

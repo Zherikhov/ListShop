@@ -1,4 +1,4 @@
-package com.zherikhov.listshop.service;
+package com.zherikhov.listshop.service.db;
 
 import com.zherikhov.listshop.dao.SubscriberRepository;
 import com.zherikhov.listshop.entity.Subscriber;

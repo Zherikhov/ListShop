@@ -1,7 +1,7 @@
 package com.zherikhov.listshop;
 
-import com.zherikhov.listshop.service.ContactService;
-import com.zherikhov.listshop.service.SubscriberService;
+import com.zherikhov.listshop.service.db.ContactService;
+import com.zherikhov.listshop.service.db.SubscriberService;
 import com.zherikhov.listshop.utils.Resources;
 import jakarta.annotation.PostConstruct;
 import org.springframework.boot.SpringApplication;

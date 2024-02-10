@@ -1,4 +1,4 @@
-package com.zherikhov.listshop.constants.buttons;
+package com.zherikhov.listshop.constants.button;
 
 import java.util.List;
 
