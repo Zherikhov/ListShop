@@ -1,13 +1,15 @@
 package com.zherikhov.listshop;
 
 import com.zherikhov.listshop.commands.Commands;
-import com.zherikhov.listshop.service.button.InlineKeyButtonService;
 import com.zherikhov.listshop.commands.SendMessageController;
-import com.zherikhov.listshop.constants.button.InlineButtonsNames;
 import com.zherikhov.listshop.constants.text.Messages;
 import com.zherikhov.listshop.entity.Contact;
+import com.zherikhov.listshop.entity.ListShop;
 import com.zherikhov.listshop.entity.Subscriber;
+import com.zherikhov.listshop.service.button.InlineKeyButtonService;
 import com.zherikhov.listshop.service.db.ContactService;
+import com.zherikhov.listshop.service.db.ItemService;
+import com.zherikhov.listshop.service.db.ListShopService;
 import com.zherikhov.listshop.service.db.SubscriberService;
 import com.zherikhov.listshop.utils.Check;
 import com.zherikhov.listshop.utils.Resources;
@@ -15,9 +17,11 @@ import com.zherikhov.listshop.utils.TextFormat;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.User;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -27,20 +31,33 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
 
     private final SubscriberService subscriberService;
     private final ContactService contactService;
+    private final ListShopService listShopService;
+    private final ItemService itemService;
 
     private final SendMessageController sendMessageController = new SendMessageController();
     private final InlineKeyButtonService inlineKeyButtonService = new InlineKeyButtonService();
 
-    public TelegramBotApplication(String botToken, SubscriberService service, ContactService contactService) {
+    User user = null;
+
+    public TelegramBotApplication(String botToken,
+                                  SubscriberService service,
+                                  ContactService contactService,
+                                  ListShopService listShopService,
+                                  ItemService itemService) {
         super(botToken);
         this.subscriberService = service;
         this.contactService = contactService;
+        this.listShopService = listShopService;
+        this.itemService = itemService;
     }
 
     @SneakyThrows
     @Override
     public void onUpdateReceived(Update update) {
-        User user = update.getMessage().getFrom();
+
+        if (!update.hasCallbackQuery()) {
+            user = update.getMessage().getFrom();
+        }
 
         if (subscriberService.findById(user.getId()) == null) {
             subscriberService.save(new Subscriber(user.getId(), user.getUserName(), user.getFirstName(), user.getLastName()));
@@ -48,10 +65,10 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
         Subscriber subscriber = subscriberService.findById(user.getId());
 
         if (subscriber != null) {
-            if (update.hasMessage() && update.getMessage().hasText() && subscriber.getMakeListStep() != 0) {
+            if ((/*update.hasMessage() && update.getMessage().hasText() ||*/ update.hasCallbackQuery()) && subscriber.getMakeListStep() != 0) {
                 makeList(update, subscriber);
             }
-//
+
             if (update.hasMessage() && update.getMessage().hasText() && subscriber.getAddContactStep() != 0) {
                 addContact(update, subscriber);
             }
@@ -74,6 +91,7 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
                 }
                 case "/help" -> {
                     log.info("/help -> " + user.getUserName());
+                    execute(sendMessageController.createMessage(update, "Your help"));
                 }
             }
             return;
@@ -84,9 +102,15 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
                 case "Make a list" -> {
                     log.info("Make a list from " + user.getUserName());
 
+                    List<String> listShopNames = new ArrayList<>();
+                    List<ListShop> listShops = listShopService.findAllByIdSubscriber(subscriber);
+                    for (ListShop i : listShops) {
+                        listShopNames.add(i.getName());
+                    }
+
                     Objects.requireNonNull(subscriber).setMakeListStep(1);
                     subscriberService.save(subscriber);
-                    execute(inlineKeyButtonService.setInlineButton(update, "Please select a list", InlineButtonsNames.LIST_NAMES));
+                    execute(inlineKeyButtonService.setInlineButton(update, "Please select a list", listShopNames));
                 }
                 case "Add a contact" -> {
                     log.info("Add a contact from " + user.getUserName());
@@ -94,7 +118,6 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
                     Objects.requireNonNull(subscriber).setAddContactStep(1);
                     subscriberService.save(subscriber);
                     execute(sendMessageController.createMessage(update, Messages.ADD_A_CONTACT));
-
                 }
                 case "Feedback" -> {
                     log.info("Feedback from " + user.getUserName());
@@ -122,8 +145,14 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
 
     @SneakyThrows
     public void makeList(Update update, Subscriber subscriber) {
-        if (subscriber.getMakeListStep() == 1) {
-//            execute(inlineKeyButtonService.setInlineButton(update, "test", InlineButtonsNames.LIST_NAMES));
+
+        CallbackQuery callbackQuery = update.getCallbackQuery();
+        String data = callbackQuery.getData();
+        String chat_id = callbackQuery.getId();
+
+        if (data.equals("list:Cancel")) {
+            execute(sendMessageController.editInlineMessage(update, "..."));
+//            itemService.findAllByIdListShop()
         }
     }
 

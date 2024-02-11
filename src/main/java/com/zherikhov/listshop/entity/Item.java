@@ -7,16 +7,16 @@ import lombok.Setter;
 @Getter
 @Setter
 @Entity
-@Table(name = "list_shops")
-public class ListShop {
+@Table(name = "items")
+public class Item {
 
     @Id
     @Column(name = "id")
     private int id;
 
     @ManyToOne
-    @JoinColumn(name = "id_subscriber")
-    private Subscriber subscriber;
+    @JoinColumn(name = "id_list_shop")
+    private ListShop listShop;
 
     @Column(name = "name")
     private String name;
