@@ -39,10 +39,20 @@ public class ListShopService {
 
     public ListShop findByName(String name) {
         ListShop listShop = null;
-        Optional<ListShop> optionalSubscriber = repository.findByName(name);
+        Optional<ListShop> optionalListShop = repository.findByName(name);
 
-        if (optionalSubscriber.isPresent()) {
-            listShop = optionalSubscriber.get();
+        if (optionalListShop.isPresent()) {
+            listShop = optionalListShop.get();
+        }
+        return listShop;
+    }
+
+    public ListShop findByNameAndSubscriberId(String name, Subscriber subscriber) {
+        ListShop listShop = null;
+        Optional<ListShop> optionalListShop = repository.findByNameAndSubscriber(name, subscriber);
+
+        if (optionalListShop.isPresent()) {
+            listShop = optionalListShop.get();
         }
         return listShop;
     }

@@ -22,11 +22,15 @@ public class Item {
     @Column(name = "name")
     private String name;
 
+    @Column(name = "active")
+    private boolean active;
+
     public Item() {
     }
 
     public Item(ListShop listShop, String name) {
         this.listShop = listShop;
         this.name = name;
+        this.active = true;
     }
 }

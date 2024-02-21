@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface ListShopRepository extends JpaRepository<ListShop, Integer> {
     Optional<ListShop> findByName(String name);
     List<ListShop> findAllBySubscriber(Subscriber subscriber);
+    Optional<ListShop> findByNameAndSubscriber(String name, Subscriber subscriber);
 }

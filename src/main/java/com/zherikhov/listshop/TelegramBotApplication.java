@@ -157,7 +157,9 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
                 ListShop listShop = listShopService.findByName(data);
                 List<Item> allByIdListShop = itemService.findAllByIdListShop(listShop);
                 names = allByIdListShop.stream().map(Item::getName).toList();
-                execute(sendMessageService.editInlineMessage(update, "was " + data));
+                subscriber.setActiveList(listShopService.findByNameAndSubscriberId(data, subscriber).getId());
+                subscriberService.save(subscriber);
+                execute(sendMessageService.editInlineMessage(update, "was " + data)); //TODO: надо понять как удалять сообщение
                 execute(inlineKeyButtonService.setInlineButton(update, data, names));
 
                 subscriber.setStepStatus(32);
@@ -177,7 +179,7 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
             subscriberService.save(subscriber);
             execute(sendMessageService.createMessage(update, "Done!"));
         } else if (subscriber.getStepStatus() == 33 && update.hasMessage()) {
-            ListShop listShop = listShopService.findByName("First");
+            ListShop listShop = listShopService.findById(subscriber.getActiveList());
             itemService.save(new Item(listShop, update.getMessage().getText()));
             subscriber.setStepStatus(0);
             subscriberService.save(subscriber);

@@ -33,6 +33,9 @@ public class Subscriber {
     @Column(name = "step_status")
     private int stepStatus;
 
+    @Column(name = "active_list")
+    private int activeList;
+
     @CreationTimestamp
     @Column(name = "created", columnDefinition="TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
     private Timestamp created;
