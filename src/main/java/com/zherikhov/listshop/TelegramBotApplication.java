@@ -1,23 +1,23 @@
 package com.zherikhov.listshop;
 
-import com.zherikhov.listshop.commands.Commands;
-import com.zherikhov.listshop.commands.SendMessageController;
 import com.zherikhov.listshop.constants.text.Messages;
 import com.zherikhov.listshop.entity.Contact;
+import com.zherikhov.listshop.entity.Item;
 import com.zherikhov.listshop.entity.ListShop;
 import com.zherikhov.listshop.entity.Subscriber;
 import com.zherikhov.listshop.service.button.InlineKeyButtonService;
+import com.zherikhov.listshop.service.commands.Commands;
 import com.zherikhov.listshop.service.db.ContactService;
 import com.zherikhov.listshop.service.db.ItemService;
 import com.zherikhov.listshop.service.db.ListShopService;
 import com.zherikhov.listshop.service.db.SubscriberService;
+import com.zherikhov.listshop.service.sender.SendMessageService;
 import com.zherikhov.listshop.utils.Check;
 import com.zherikhov.listshop.utils.Resources;
 import com.zherikhov.listshop.utils.TextFormat;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
-import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.User;
 
@@ -34,7 +34,7 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
     private final ListShopService listShopService;
     private final ItemService itemService;
 
-    private final SendMessageController sendMessageController = new SendMessageController();
+    private final SendMessageService sendMessageService = new SendMessageService();
     private final InlineKeyButtonService inlineKeyButtonService = new InlineKeyButtonService();
 
     User user = null;
@@ -65,15 +65,15 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
         Subscriber subscriber = subscriberService.findById(user.getId());
 
         if (subscriber != null) {
-            if ((/*update.hasMessage() && update.getMessage().hasText() ||*/ update.hasCallbackQuery()) && subscriber.getMakeListStep() != 0) {
+            if ((update.hasMessage() && update.getMessage().hasText() || update.hasCallbackQuery()) && subscriber.getStepStatus() > 29 && subscriber.getStepStatus() < 40) {
                 makeList(update, subscriber);
             }
 
-            if (update.hasMessage() && update.getMessage().hasText() && subscriber.getAddContactStep() != 0) {
+            if (update.hasMessage() && update.getMessage().hasText() && subscriber.getStepStatus() > 19 && subscriber.getStepStatus() < 30) {
                 addContact(update, subscriber);
             }
 
-            if (update.hasMessage() && update.getMessage().hasText() && subscriber.getFeedbackStep() != 0) {
+            if (update.hasMessage() && update.getMessage().hasText() && subscriber.getStepStatus() > 9 && subscriber.getStepStatus() < 20) {
                 feedback(update, subscriber);
             }
         }
@@ -91,16 +91,23 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
                 }
                 case "/help" -> {
                     log.info("/help -> " + user.getUserName());
-                    execute(sendMessageController.createMessage(update, "Your help"));
+                    execute(sendMessageService.createMessage(update, "Your help"));
                 }
             }
             return;
         }
 
+        /*
+          reserved statuses
+          0 - beginner
+          10 - 19 - Feedback
+          20 - 29 - Add a contact
+          30 - 39 - Make a list
+         */
         if (update.hasMessage() && update.getMessage().hasText()) {
             switch (update.getMessage().getText()) {
                 case "Make a list" -> {
-                    log.info("Make a list from " + user.getUserName());
+                    log.info("Make a list - " + user.getUserName());
 
                     List<String> listShopNames = new ArrayList<>();
                     List<ListShop> listShops = listShopService.findAllByIdSubscriber(subscriber);
@@ -108,87 +115,109 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
                         listShopNames.add(i.getName());
                     }
 
-                    Objects.requireNonNull(subscriber).setMakeListStep(1);
+                    Objects.requireNonNull(subscriber).setStepStatus(30);
                     subscriberService.save(subscriber);
-                    execute(inlineKeyButtonService.setInlineButton(update, "Please select a list", listShopNames));
+                    execute(inlineKeyButtonService.setInlineButton(update, Messages.MAKE_A_LIST_STEP1, listShopNames));
                 }
                 case "Add a contact" -> {
-                    log.info("Add a contact from " + user.getUserName());
+                    log.info("Add a contact - " + user.getUserName());
 
-                    Objects.requireNonNull(subscriber).setAddContactStep(1);
+                    Objects.requireNonNull(subscriber).setStepStatus(20);
                     subscriberService.save(subscriber);
-                    execute(sendMessageController.createMessage(update, Messages.ADD_A_CONTACT));
+                    execute(sendMessageService.createMessage(update, Messages.ADD_A_CONTACT_STEP1));
                 }
                 case "Feedback" -> {
-                    log.info("Feedback from " + user.getUserName());
+                    log.info("Feedback - " + user.getUserName());
 
-                    Objects.requireNonNull(subscriber).setFeedbackStep(1);
+                    Objects.requireNonNull(subscriber).setStepStatus(10);
                     subscriberService.save(subscriber);
-                    execute(sendMessageController.createMessage(update, Messages.FEEDBACK));
+                    execute(sendMessageService.createMessage(update, Messages.FEEDBACK_STEP1));
                 }
                 case "About Bot" -> {
-                    log.info("About Bot from " + user.getUserName());
+                    log.info("About Bot - " + user.getUserName());
+
                     execute(startCommand.start(update));
                 }
             }
         }
     }
 
-    public Subscriber findSubscriber(List<Subscriber> subscribers, User user) {
-        for (Subscriber subscriber : subscribers) {
-            if (subscriber.getId() == user.getId()) {
-                return subscriber;
-            }
-        }
-        return null;
-    }
-
     @SneakyThrows
     public void makeList(Update update, Subscriber subscriber) {
+        String data = update.hasCallbackQuery() ? update.getCallbackQuery().getData().split(":")[1] : null;
+        List<String> names;
 
-        CallbackQuery callbackQuery = update.getCallbackQuery();
-        String data = callbackQuery.getData();
-        String chat_id = callbackQuery.getId();
+        if (data != null) {
+            if (data.equals("Cancel")) {
+                subscriber.setStepStatus(0);
+                subscriberService.save(subscriber);
+                execute(sendMessageService.editInlineMessage(update, "Canceled"));
 
-        if (data.equals("list:Cancel")) {
-            execute(sendMessageController.editInlineMessage(update, "..."));
-//            itemService.findAllByIdListShop()
+            } else if (subscriber.getStepStatus() == 30 && !data.equals("New")) {
+                ListShop listShop = listShopService.findByName(data);
+                List<Item> allByIdListShop = itemService.findAllByIdListShop(listShop);
+                names = allByIdListShop.stream().map(Item::getName).toList();
+                execute(sendMessageService.editInlineMessage(update, "was " + data));
+                execute(inlineKeyButtonService.setInlineButton(update, data, names));
+
+                subscriber.setStepStatus(32);
+                subscriberService.save(subscriber);
+            } else if (subscriber.getStepStatus() == 30 && data.equals("New")) {
+                execute(sendMessageService.editInlineMessage(update, "Please enter a name list"));
+                subscriber.setStepStatus(31);
+                subscriberService.save(subscriber);
+            } else if (subscriber.getStepStatus() == 32 && data.equals("New")) {
+                execute(sendMessageService.editInlineMessage(update, "Please enter a name item"));
+                subscriber.setStepStatus(33);
+                subscriberService.save(subscriber);
+            }
+        } else if (subscriber.getStepStatus() == 31 && update.hasMessage()) {
+            listShopService.save(new ListShop(subscriber, update.getMessage().getText()));
+            subscriber.setStepStatus(0);
+            subscriberService.save(subscriber);
+            execute(sendMessageService.createMessage(update, "Done!"));
+        } else if (subscriber.getStepStatus() == 33 && update.hasMessage()) {
+            ListShop listShop = listShopService.findByName("First");
+            itemService.save(new Item(listShop, update.getMessage().getText()));
+            subscriber.setStepStatus(0);
+            subscriberService.save(subscriber);
+            execute(sendMessageService.createMessage(update, "Done!"));
         }
     }
 
     @SneakyThrows
     public void addContact(Update update, Subscriber subscriber) {
-        if (subscriber.getAddContactStep() == 1) {
+        if (subscriber.getStepStatus() == 20) {
             String userName = TextFormat.userNameFormat(update.getMessage().getText());
-            Subscriber checkSubscriber = subscriberService.findByUserName(userName);
+            Subscriber checkingSubscriber = subscriberService.findByUserName(userName);
 
-            if (checkSubscriber != null) {
-                subscriber.setAddContactStep(2);
+            if (checkingSubscriber != null) {
+                subscriber.setStepStatus(21);
                 subscriberService.save(subscriber);
-                execute(sendMessageController.createMessage(update, Messages.WAIT_CONTACT));
+                execute(sendMessageService.createMessage(update, Messages.ADD_A_CONTACT_STEP2));
             } else {
-                subscriber.setAddContactStep(0);
+                subscriber.setStepStatus(0);
                 subscriberService.save(subscriber);
-                execute(sendMessageController.createMessage(update, Messages.NOT_FOUND_NICK_NAME));
+                execute(sendMessageService.createMessage(update, Messages.ADD_A_CONTACT_NOT_FOUND_NICKNAME));
             }
-        } else if (subscriber.getAddContactStep() == 2) {
+        } else if (subscriber.getStepStatus() == 21) {
             Contact contact = new Contact(subscriber, update.getMessage().getText(), subscriber.getUserName());
             contactService.save(contact);
 
-            subscriber.setAddContactStep(0);
+            subscriber.setStepStatus(0);
             subscriberService.save(subscriber);
 
-            execute(sendMessageController.createMessage(update, Messages.WAIT_NICK_NAME));
+            execute(sendMessageService.createMessage(update, Messages.ADD_A_CONTACT_STEP3));
         }
     }
 
     @SneakyThrows
     public void feedback(Update update, Subscriber subscriber) {
-        execute(sendMessageController.createMessageForSupport(update.getMessage().getText()));
+        execute(sendMessageService.createMessageForSupport(update.getMessage().getText()));
 
-        subscriber.setFeedbackStep(0);
+        subscriber.setStepStatus(0);
         subscriberService.save(subscriber);
-        execute(sendMessageController.createMessage(update, Messages.FEEDBACK2));
+        execute(sendMessageService.createMessage(update, Messages.FEEDBACK_STEP2));
     }
 
     @Override

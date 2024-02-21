@@ -1,12 +1,11 @@
-package com.zherikhov.listshop.commands;
+package com.zherikhov.listshop.service.sender;
 
 import org.telegram.telegrambots.meta.api.methods.ParseMode;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
-import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
-public class SendMessageController {
+public class SendMessageService {
     public SendMessage createMessage(Update update, String text) {
         SendMessage sendMessage = new SendMessage();
         if (update.hasCallbackQuery()) {
@@ -29,13 +28,15 @@ public class SendMessageController {
     }
 
     public EditMessageText editInlineMessage(Update update, String text) {
-        EditMessageText editMessageText = new EditMessageText();
         int messageId = update.getCallbackQuery().getMessage().getMessageId();
         long chatId = update.getCallbackQuery().getMessage().getChatId();
+
+        EditMessageText editMessageText = new EditMessageText();
         editMessageText.setChatId(chatId);
         editMessageText.setMessageId(messageId);
         editMessageText.setText(text);
         editMessageText.setParseMode(ParseMode.HTML);
+
         return editMessageText;
     }
 }

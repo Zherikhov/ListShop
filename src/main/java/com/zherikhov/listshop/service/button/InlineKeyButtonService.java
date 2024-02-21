@@ -1,6 +1,6 @@
 package com.zherikhov.listshop.service.button;
 
-import com.zherikhov.listshop.commands.SendMessageController;
+import com.zherikhov.listshop.service.sender.SendMessageService;
 import com.zherikhov.listshop.content.CustomInlineKeyButton;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -10,7 +10,7 @@ import java.util.List;
 
 public class InlineKeyButtonService {
     CustomInlineKeyButton inlineKeyButtons = new CustomInlineKeyButton();
-    SendMessageController sendMessageController = new SendMessageController();
+    SendMessageService sendMessageController = new SendMessageService();
     InlineKeyboardMarkup keyboardMarkup;
 
     public SendMessage setInlineButton(Update update, String text, List<String> names) {

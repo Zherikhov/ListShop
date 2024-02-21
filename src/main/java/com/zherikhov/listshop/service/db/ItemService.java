@@ -21,4 +21,8 @@ public class ItemService {
     public List<Item> findAllByIdListShop(ListShop listShop) {
         return repository.findAllByListShop(listShop);
     }
+
+    public void save(Item item) {
+        repository.save(item);
+    }
 }

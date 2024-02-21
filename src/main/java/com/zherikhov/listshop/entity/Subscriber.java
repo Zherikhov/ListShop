@@ -30,14 +30,8 @@ public class Subscriber {
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "subscriber")
     private List<Contact> contacts;
 
-    @Column(name = "make_list")
-    private int makeListStep;
-
-    @Column(name = "add_contact")
-    private int addContactStep;
-
-    @Column(name = "feed_back")
-    private int feedbackStep;
+    @Column(name = "step_status")
+    private int stepStatus;
 
     @CreationTimestamp
     @Column(name = "created", columnDefinition="TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
@@ -61,9 +55,7 @@ public class Subscriber {
                 ", firstName='" + firstName + '\'' +
                 ", lastName='" + lastName + '\'' +
                 ", contacts=" + contacts +
-                ", makeListSteps=" + makeListStep +
-                ", addContactSteps=" + addContactStep +
-                ", feedbackSteps=" + feedbackStep +
+                ", stepStatus=" + stepStatus +
                 ", created=" + created +
                 '}';
     }

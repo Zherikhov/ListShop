@@ -11,6 +11,7 @@ import lombok.Setter;
 public class Item {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     private int id;
 
@@ -20,4 +21,12 @@ public class Item {
 
     @Column(name = "name")
     private String name;
+
+    public Item() {
+    }
+
+    public Item(ListShop listShop, String name) {
+        this.listShop = listShop;
+        this.name = name;
+    }
 }
