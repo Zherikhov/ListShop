@@ -37,7 +37,7 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
     private final SendMessageService sendMessageService = new SendMessageService();
     private final InlineKeyButtonService inlineKeyButtonService = new InlineKeyButtonService();
 
-    User user = null;
+    private User user = null;
 
     public TelegramBotApplication(String botToken,
                                   SubscriberService service,
@@ -67,14 +67,17 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
         if (subscriber != null) {
             if ((update.hasMessage() && update.getMessage().hasText() || update.hasCallbackQuery()) && subscriber.getStepStatus() > 29 && subscriber.getStepStatus() < 40) {
                 makeList(update, subscriber);
+                return;
             }
 
             if (update.hasMessage() && update.getMessage().hasText() && subscriber.getStepStatus() > 19 && subscriber.getStepStatus() < 30) {
                 addContact(update, subscriber);
+                return;
             }
 
             if (update.hasMessage() && update.getMessage().hasText() && subscriber.getStepStatus() > 9 && subscriber.getStepStatus() < 20) {
                 feedback(update, subscriber);
+                return;
             }
         }
 
@@ -109,15 +112,11 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
                 case "Make a list" -> {
                     log.info("Make a list - " + user.getUserName());
 
-                    List<String> listShopNames = new ArrayList<>();
-                    List<ListShop> listShops = listShopService.findAllByIdSubscriber(subscriber);
-                    for (ListShop i : listShops) {
-                        listShopNames.add(i.getName());
-                    }
+
 
                     Objects.requireNonNull(subscriber).setStepStatus(30);
                     subscriberService.save(subscriber);
-                    execute(inlineKeyButtonService.setInlineButton(update, Messages.MAKE_A_LIST_STEP1, listShopNames));
+                    execute(inlineKeyButtonService.setInlineButton(update, Messages.MAKE_A_LIST_STEP1, getAllListShopNames(subscriber)));
                 }
                 case "Add a contact" -> {
                     log.info("Add a contact - " + user.getUserName());
@@ -145,7 +144,10 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
     @SneakyThrows
     public void makeList(Update update, Subscriber subscriber) {
         String data = update.hasCallbackQuery() ? update.getCallbackQuery().getData().split(":")[1] : null;
-        List<String> names;
+        String text = update.hasMessage() ? update.getMessage().getText() : null;
+
+        ListShop activeListShop;
+        List<String> listShopNames;
 
         if (data != null) {
             if (data.equals("Cancel")) {
@@ -154,36 +156,44 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
                 execute(sendMessageService.editInlineMessage(update, "Canceled"));
 
             } else if (subscriber.getStepStatus() == 30 && !data.equals("New")) {
-                ListShop listShop = listShopService.findByName(data);
-                List<Item> allByIdListShop = itemService.findAllByIdListShop(listShop);
-                names = allByIdListShop.stream().map(Item::getName).toList();
                 subscriber.setActiveList(listShopService.findByNameAndSubscriberId(data, subscriber).getId());
-                subscriberService.save(subscriber);
-                execute(sendMessageService.editInlineMessage(update, "was " + data)); //TODO: надо понять как удалять сообщение
-                execute(inlineKeyButtonService.setInlineButton(update, data, names));
-
                 subscriber.setStepStatus(32);
                 subscriberService.save(subscriber);
-            } else if (subscriber.getStepStatus() == 30 && data.equals("New")) {
-                execute(sendMessageService.editInlineMessage(update, "Please enter a name list"));
+
+                listShopNames = getAllItemNamesByActiveList(subscriber);
+                execute(sendMessageService.editInlineMessage(update, "was " + data)); //TODO: надо понять как удалять сообщение
+                execute(inlineKeyButtonService.setInlineButton(update, data, listShopNames));
+
+            } else if (subscriber.getStepStatus() == 30) { //&& data.equals("New")
                 subscriber.setStepStatus(31);
                 subscriberService.save(subscriber);
+                execute(sendMessageService.editInlineMessage(update, "Please enter a name list"));
+
             } else if (subscriber.getStepStatus() == 32 && data.equals("New")) {
-                execute(sendMessageService.editInlineMessage(update, "Please enter a name item"));
                 subscriber.setStepStatus(33);
                 subscriberService.save(subscriber);
+                execute(sendMessageService.editInlineMessage(update, "Please enter a name item"));
             }
-        } else if (subscriber.getStepStatus() == 31 && update.hasMessage()) {
-            listShopService.save(new ListShop(subscriber, update.getMessage().getText()));
-            subscriber.setStepStatus(0);
-            subscriberService.save(subscriber);
-            execute(sendMessageService.createMessage(update, "Done!"));
-        } else if (subscriber.getStepStatus() == 33 && update.hasMessage()) {
-            ListShop listShop = listShopService.findById(subscriber.getActiveList());
-            itemService.save(new Item(listShop, update.getMessage().getText()));
-            subscriber.setStepStatus(0);
-            subscriberService.save(subscriber);
-            execute(sendMessageService.createMessage(update, "Done!"));
+        } else if (text != null) {
+
+            if (subscriber.getStepStatus() == 31) {
+                listShopService.save(new ListShop(subscriber, text));
+
+                subscriber.setStepStatus(30);
+                subscriberService.save(subscriber);
+
+                listShopNames = getAllListShopNames(subscriber);
+                execute(inlineKeyButtonService.setInlineButton(update, Messages.MAKE_A_LIST_STEP1, listShopNames));
+
+            } else if (subscriber.getStepStatus() == 33) {
+                activeListShop = listShopService.findById(subscriber.getActiveList());
+                itemService.save(new Item(activeListShop, update.getMessage().getText()));
+                subscriber.setStepStatus(32);
+                subscriberService.save(subscriber);
+
+                listShopNames = getAllItemNamesByActiveList(subscriber);
+                execute(inlineKeyButtonService.setInlineButton(update, update.getMessage().getText(), listShopNames));
+            }
         }
     }
 
@@ -211,6 +221,21 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
 
             execute(sendMessageService.createMessage(update, Messages.ADD_A_CONTACT_STEP3));
         }
+    }
+
+    private List<String> getAllItemNamesByActiveList(Subscriber subscriber) {
+        ListShop activeListShop = listShopService.findById(subscriber.getActiveList());
+        List<Item> allByIdListShop = activeListShop != null ? itemService.findAllByIdListShop(activeListShop) : null;
+        return allByIdListShop != null ? allByIdListShop.stream().map(Item::getName).toList() : new ArrayList<>();
+    }
+
+    private List<String> getAllListShopNames(Subscriber subscriber) {
+        List<String> listShopNames = new ArrayList<>();
+        List<ListShop> listShops = listShopService.findAllByIdSubscriber(subscriber);
+        for (ListShop i : listShops) {
+            listShopNames.add(i.getName());
+        }
+        return listShopNames;
     }
 
     @SneakyThrows

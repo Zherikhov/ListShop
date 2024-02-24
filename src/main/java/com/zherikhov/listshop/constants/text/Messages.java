@@ -2,6 +2,7 @@ package com.zherikhov.listshop.constants.text;
 
 public class Messages {
     public final static String MAKE_A_LIST_STEP1 = "Please select a list";
+    public final static String MAKE_A_LIST_STEP2 = "Please select a item";
 
     public final static String FEEDBACK_STEP1 = "Please, write your feedback";
     public final static String FEEDBACK_STEP2 = "Thank you for your feedback, support will contact you";
