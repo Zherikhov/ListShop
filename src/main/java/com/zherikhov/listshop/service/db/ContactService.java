@@ -2,16 +2,15 @@ package com.zherikhov.listshop.service.db;
 
 import com.zherikhov.listshop.dao.ContactRepository;
 import com.zherikhov.listshop.entity.Contact;
-import com.zherikhov.listshop.entity.Subscriber;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.Optional;
 
-@Slf4j
 @Service
 public class ContactService {
+    Logger logger = LoggerFactory.getLogger(ContactService.class);
 
     private final ContactRepository repository;
 
@@ -19,25 +18,20 @@ public class ContactService {
         this.repository = repository;
     }
 
-    public List<Contact> findAll() {
-        List<Contact> contacts = repository.findAll();
-        log.info(contacts.toString());
-        return contacts;
-    }
-
     public void save(Contact contact) {
+        logger.info("Contact " + contact.getNickName() + "has been saved");
+
         repository.save(contact);
-        log.info("Added a new contact to DB: " + contact.getId() + " " +
-                " " + contact.getNickName() + " " + contact.getUserName() + " from user - " + contact.getSubscriber().getId());
     }
 
     public Contact findById(int id) {
+        logger.info("Search for a contact by ID " + id);
+
         Contact subscriber = null;
         Optional<Contact> optionalSubscriber = repository.findById(id);
 
         if (optionalSubscriber.isPresent()) {
             subscriber = optionalSubscriber.get();
-            log.info(subscriber.toString());
         }
         return subscriber;
     }

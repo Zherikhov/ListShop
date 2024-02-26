@@ -16,7 +16,9 @@ import com.zherikhov.listshop.utils.Check;
 import com.zherikhov.listshop.utils.Resources;
 import com.zherikhov.listshop.utils.TextFormat;
 import lombok.SneakyThrows;
-import lombok.extern.slf4j.Slf4j;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.User;
@@ -25,8 +27,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-@Slf4j
 public class TelegramBotApplication extends TelegramLongPollingBot {
+    Logger logger = LoggerFactory.getLogger(TelegramBotApplication.class);
     private final Commands startCommand = new Commands();
 
     private final SubscriberService subscriberService;
@@ -54,6 +56,10 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
     @SneakyThrows
     @Override
     public void onUpdateReceived(Update update) {
+        logger.trace("trace");
+        logger.debug("debug");
+        logger.info("info");
+        logger.warn("warn");
 
         if (!update.hasCallbackQuery()) {
             user = update.getMessage().getFrom();
@@ -85,15 +91,16 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
         if (command != null) {
             switch (command) {
                 case "/start" -> {
-                    log.info("/start -> " + user.getUserName());
+                    logger.info("/START " + user.getId() + " " + user.getUserName());
 
                     if (subscriberService.findById(user.getId()) == null) {
                         subscriberService.save(new Subscriber(user.getId(), user.getUserName(), user.getFirstName(), user.getLastName()));
+                        logger.info("Added a new user to DB " + user.getId() + " " + user.getUserName());
                     }
                     execute(startCommand.start(update));
                 }
                 case "/help" -> {
-                    log.info("/help -> " + user.getUserName());
+                    logger.info("/HELP " + user.getUserName());
                     execute(sendMessageService.createMessage(update, "Your help"));
                 }
             }
@@ -110,30 +117,28 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
         if (update.hasMessage() && update.getMessage().hasText()) {
             switch (update.getMessage().getText()) {
                 case "Make a list" -> {
-                    log.info("Make a list - " + user.getUserName());
-
-
+                    logger.info("Make a list " + user.getId() + " " + user.getUserName());
 
                     Objects.requireNonNull(subscriber).setStepStatus(30);
                     subscriberService.save(subscriber);
                     execute(inlineKeyButtonService.setInlineButton(update, Messages.MAKE_A_LIST_STEP1, getAllListShopNames(subscriber)));
                 }
                 case "Add a contact" -> {
-                    log.info("Add a contact - " + user.getUserName());
+                    logger.info("Add a contact " + user.getId() + " " + user.getUserName());
 
                     Objects.requireNonNull(subscriber).setStepStatus(20);
                     subscriberService.save(subscriber);
                     execute(sendMessageService.createMessage(update, Messages.ADD_A_CONTACT_STEP1));
                 }
                 case "Feedback" -> {
-                    log.info("Feedback - " + user.getUserName());
+                    logger.info("Feedback " + user.getId() + " " + user.getUserName());
 
                     Objects.requireNonNull(subscriber).setStepStatus(10);
                     subscriberService.save(subscriber);
                     execute(sendMessageService.createMessage(update, Messages.FEEDBACK_STEP1));
                 }
                 case "About Bot" -> {
-                    log.info("About Bot - " + user.getUserName());
+                    logger.info("About Bot " + user.getId() + " " + user.getUserName());
 
                     execute(startCommand.start(update));
                 }
