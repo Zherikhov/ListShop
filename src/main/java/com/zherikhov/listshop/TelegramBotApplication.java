@@ -56,10 +56,6 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
     @SneakyThrows
     @Override
     public void onUpdateReceived(Update update) {
-        logger.trace("trace");
-        logger.debug("debug");
-        logger.info("info");
-        logger.warn("warn");
 
         if (!update.hasCallbackQuery()) {
             user = update.getMessage().getFrom();
