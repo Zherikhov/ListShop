@@ -1,11 +1,11 @@
-package com.zherikhov.listshop.constants.button;
+package com.zherikhov.listshop.constants;
 
 import java.util.List;
 
 public class KeyboardsButtonNames {
 
     private static final List<String> KEYBOARD_ROW_FIRST = List.of(
-            "Make a list",
+            "My lists",
             "Add a contact"
     );
 

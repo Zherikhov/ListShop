@@ -1,6 +1,6 @@
 package com.zherikhov.listshop.service.commands;
 
-import com.zherikhov.listshop.constants.button.KeyboardsButtonNames;
+import com.zherikhov.listshop.constants.KeyboardsButtonNames;
 import com.zherikhov.listshop.content.CustomKeyboardButton;
 import com.zherikhov.listshop.service.sender.SendMessageService;
 import org.telegram.telegrambots.meta.api.methods.ParseMode;
@@ -8,7 +8,7 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 
-public class Commands {
+public class CommandService {
     CustomKeyboardButton customKeyboardButton = new CustomKeyboardButton();
     SendMessageService messageController = new SendMessageService();
 

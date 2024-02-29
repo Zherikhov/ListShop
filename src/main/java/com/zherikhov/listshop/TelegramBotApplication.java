@@ -1,12 +1,12 @@
 package com.zherikhov.listshop;
 
-import com.zherikhov.listshop.constants.text.Messages;
+import com.zherikhov.listshop.constants.TextMessage;
 import com.zherikhov.listshop.entity.Contact;
 import com.zherikhov.listshop.entity.Item;
 import com.zherikhov.listshop.entity.ListShop;
 import com.zherikhov.listshop.entity.Subscriber;
 import com.zherikhov.listshop.service.button.InlineKeyButtonService;
-import com.zherikhov.listshop.service.commands.Commands;
+import com.zherikhov.listshop.service.commands.CommandService;
 import com.zherikhov.listshop.service.db.ContactService;
 import com.zherikhov.listshop.service.db.ItemService;
 import com.zherikhov.listshop.service.db.ListShopService;
@@ -29,7 +29,7 @@ import java.util.Objects;
 
 public class TelegramBotApplication extends TelegramLongPollingBot {
     Logger logger = LoggerFactory.getLogger(TelegramBotApplication.class);
-    private final Commands startCommand = new Commands();
+    private final CommandService startCommand = new CommandService();
 
     private final SubscriberService subscriberService;
     private final ContactService contactService;
@@ -112,26 +112,26 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
          */
         if (update.hasMessage() && update.getMessage().hasText()) {
             switch (update.getMessage().getText()) {
-                case "Make a list" -> {
-                    logger.info("Make a list " + user.getId() + " " + user.getUserName());
+                case "My lists" -> {
+                    logger.info("My lists " + user.getId() + " " + user.getUserName());
 
                     Objects.requireNonNull(subscriber).setStepStatus(30);
                     subscriberService.save(subscriber);
-                    execute(inlineKeyButtonService.setInlineButton(update, Messages.MAKE_A_LIST_STEP1, getAllListShopNames(subscriber)));
+                    execute(inlineKeyButtonService.setInlineButton(update, TextMessage.SELECT_LIST, getAllListShopNames(subscriber)));
                 }
                 case "Add a contact" -> {
                     logger.info("Add a contact " + user.getId() + " " + user.getUserName());
 
                     Objects.requireNonNull(subscriber).setStepStatus(20);
                     subscriberService.save(subscriber);
-                    execute(sendMessageService.createMessage(update, Messages.ADD_A_CONTACT_STEP1));
+                    execute(sendMessageService.createMessage(update, TextMessage.PRINT_YOUR_CONTACT));
                 }
                 case "Feedback" -> {
                     logger.info("Feedback " + user.getId() + " " + user.getUserName());
 
                     Objects.requireNonNull(subscriber).setStepStatus(10);
                     subscriberService.save(subscriber);
-                    execute(sendMessageService.createMessage(update, Messages.FEEDBACK_STEP1));
+                    execute(sendMessageService.createMessage(update, TextMessage.WRITE_YOUR_FEEDBACK));
                 }
                 case "About Bot" -> {
                     logger.info("About Bot " + user.getId() + " " + user.getUserName());
@@ -151,32 +151,36 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
         List<String> listShopNames;
 
         if (data != null) {
-            if (data.equals("Cancel")) {
+            if (data.equals("Close")) {
                 subscriber.setStepStatus(0);
                 subscriberService.save(subscriber);
-                execute(sendMessageService.editInlineMessage(update, "Canceled"));
+                execute(sendMessageService.editInlineMessage(update, TextMessage.CLOSED));
 
-            } else if (subscriber.getStepStatus() == 30 && !data.equals("New")) {
+                //30 - user in menu of 'my lists'
+            } else if (subscriber.getStepStatus() == 30 && !data.equals(TextMessage.ADD)) {
                 subscriber.setActiveList(listShopService.findByNameAndSubscriberId(data, subscriber).getId());
                 subscriber.setStepStatus(32);
                 subscriberService.save(subscriber);
 
                 listShopNames = getAllItemNamesByActiveList(subscriber);
-                execute(sendMessageService.editInlineMessage(update, "was " + data)); //TODO: надо понять как удалять сообщение
+                execute(sendMessageService.editInlineMessage(update, "Selected " + data)); //TODO: надо понять как удалять сообщение
                 execute(inlineKeyButtonService.setInlineButton(update, data, listShopNames));
 
-            } else if (subscriber.getStepStatus() == 30) { //&& data.equals("New")
+                //user pressed add List
+            } else if (subscriber.getStepStatus() == 30) {
                 subscriber.setStepStatus(31);
                 subscriberService.save(subscriber);
-                execute(sendMessageService.editInlineMessage(update, "Please enter a name list"));
+                execute(sendMessageService.editInlineMessage(update, TextMessage.PRINT_NAME_LIST));
 
-            } else if (subscriber.getStepStatus() == 32 && data.equals("New")) {
+                //32 - user pressed add Item
+            } else if (subscriber.getStepStatus() == 32 && data.equals("Add")) {
                 subscriber.setStepStatus(33);
                 subscriberService.save(subscriber);
-                execute(sendMessageService.editInlineMessage(update, "Please enter a name item"));
+                execute(sendMessageService.editInlineMessage(update, TextMessage.PRINT_NAME_ITEM));
             }
         } else if (text != null) {
 
+            //31 - user printed a name List
             if (subscriber.getStepStatus() == 31) {
                 listShopService.save(new ListShop(subscriber, text));
 
@@ -184,11 +188,13 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
                 subscriberService.save(subscriber);
 
                 listShopNames = getAllListShopNames(subscriber);
-                execute(inlineKeyButtonService.setInlineButton(update, Messages.MAKE_A_LIST_STEP1, listShopNames));
+                execute(inlineKeyButtonService.setInlineButton(update, TextMessage.SELECT_LIST, listShopNames));
 
+                //33 - user printed a name Item
             } else if (subscriber.getStepStatus() == 33) {
                 activeListShop = listShopService.findById(subscriber.getActiveList());
                 itemService.save(new Item(activeListShop, update.getMessage().getText()));
+
                 subscriber.setStepStatus(32);
                 subscriberService.save(subscriber);
 
@@ -207,11 +213,11 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
             if (checkingSubscriber != null) {
                 subscriber.setStepStatus(21);
                 subscriberService.save(subscriber);
-                execute(sendMessageService.createMessage(update, Messages.ADD_A_CONTACT_STEP2));
+                execute(sendMessageService.createMessage(update, TextMessage.PRINT_NICKNAME));
             } else {
                 subscriber.setStepStatus(0);
                 subscriberService.save(subscriber);
-                execute(sendMessageService.createMessage(update, Messages.ADD_A_CONTACT_NOT_FOUND_NICKNAME));
+                execute(sendMessageService.createMessage(update, TextMessage.NOT_FOUND_NICKNAME));
             }
         } else if (subscriber.getStepStatus() == 21) {
             Contact contact = new Contact(subscriber, update.getMessage().getText(), subscriber.getUserName());
@@ -220,7 +226,7 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
             subscriber.setStepStatus(0);
             subscriberService.save(subscriber);
 
-            execute(sendMessageService.createMessage(update, Messages.ADD_A_CONTACT_STEP3));
+            execute(sendMessageService.createMessage(update, TextMessage.ADDED_IN_YOUR_CONTACT_LIST));
         }
     }
 
@@ -245,7 +251,7 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
 
         subscriber.setStepStatus(0);
         subscriberService.save(subscriber);
-        execute(sendMessageService.createMessage(update, Messages.FEEDBACK_STEP2));
+        execute(sendMessageService.createMessage(update, TextMessage.WILL_CONTACT_YOU));
     }
 
     @Override

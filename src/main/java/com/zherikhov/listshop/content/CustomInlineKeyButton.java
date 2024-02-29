@@ -23,15 +23,15 @@ public class CustomInlineKeyButton {
         List<InlineKeyboardButton> newButtonRow = new ArrayList<>();
 
         newButtonRow.add(new InlineKeyboardButton());
-        newButtonRow.getFirst().setText("New");
-        newButtonRow.getFirst().setCallbackData("list:" + "New");
+        newButtonRow.getFirst().setText("➕");
+        newButtonRow.getFirst().setCallbackData("list:" + "Add");
         keyboardList.add(newButtonRow);
 
         List<InlineKeyboardButton> cancelButtonRow = new ArrayList<>();
 
         cancelButtonRow.add(new InlineKeyboardButton());
-        cancelButtonRow.getFirst().setText("Cancel");
-        cancelButtonRow.getFirst().setCallbackData("list:" + "Cancel");
+        cancelButtonRow.getFirst().setText("Close");
+        cancelButtonRow.getFirst().setCallbackData("list:" + "Close");
         keyboardList.add(cancelButtonRow);
 
         return keyboardList;
