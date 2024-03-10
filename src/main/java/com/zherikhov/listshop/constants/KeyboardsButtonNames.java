@@ -14,7 +14,7 @@ public class KeyboardsButtonNames {
             "About Bot"
     );
 
-    public static final List<List<String>> keyboardRows = List.of(
+    public static final List<List<String>> KEYBOARD_BUTTON_NAMES = List.of(
             KEYBOARD_ROW_FIRST,
             KEYBOARD_ROW_SECOND
     );

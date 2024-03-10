@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface ItemRepository extends JpaRepository<Item, Integer> {
     Optional<Item> findByName(String name);
     List<Item> findAllByListShop(ListShop listShop);
+    void deleteByNameAndListShop(String name, ListShop listShop);
 }

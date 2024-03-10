@@ -1,6 +1,5 @@
 package com.zherikhov.listshop;
 
-import com.zherikhov.listshop.constants.TextMessage;
 import com.zherikhov.listshop.entity.Contact;
 import com.zherikhov.listshop.entity.Item;
 import com.zherikhov.listshop.entity.ListShop;
@@ -16,7 +15,6 @@ import com.zherikhov.listshop.utils.Check;
 import com.zherikhov.listshop.utils.Resources;
 import com.zherikhov.listshop.utils.TextFormat;
 import lombok.SneakyThrows;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -27,15 +25,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import static com.zherikhov.listshop.constants.TextMessage.*;
+
 public class TelegramBotApplication extends TelegramLongPollingBot {
     Logger logger = LoggerFactory.getLogger(TelegramBotApplication.class);
-    private final CommandService startCommand = new CommandService();
 
     private final SubscriberService subscriberService;
     private final ContactService contactService;
     private final ListShopService listShopService;
     private final ItemService itemService;
 
+    private final CommandService startCommand = new CommandService();
     private final SendMessageService sendMessageService = new SendMessageService();
     private final InlineKeyButtonService inlineKeyButtonService = new InlineKeyButtonService();
 
@@ -117,21 +117,21 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
 
                     Objects.requireNonNull(subscriber).setStepStatus(30);
                     subscriberService.save(subscriber);
-                    execute(inlineKeyButtonService.setInlineButton(update, TextMessage.SELECT_LIST, getAllListShopNames(subscriber)));
+                    execute(inlineKeyButtonService.setInlineButtonAllButtons(update, SELECT_LIST, getAllListShopNames(subscriber)));
                 }
                 case "Add a contact" -> {
                     logger.info("Add a contact " + user.getId() + " " + user.getUserName());
 
                     Objects.requireNonNull(subscriber).setStepStatus(20);
                     subscriberService.save(subscriber);
-                    execute(sendMessageService.createMessage(update, TextMessage.PRINT_YOUR_CONTACT));
+                    execute(sendMessageService.createMessage(update, PRINT_YOUR_CONTACT));
                 }
                 case "Feedback" -> {
                     logger.info("Feedback " + user.getId() + " " + user.getUserName());
 
                     Objects.requireNonNull(subscriber).setStepStatus(10);
                     subscriberService.save(subscriber);
-                    execute(sendMessageService.createMessage(update, TextMessage.WRITE_YOUR_FEEDBACK));
+                    execute(sendMessageService.createMessage(update, WRITE_YOUR_FEEDBACK));
                 }
                 case "About Bot" -> {
                     logger.info("About Bot " + user.getId() + " " + user.getUserName());
@@ -148,35 +148,51 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
         String text = update.hasMessage() ? update.getMessage().getText() : null;
 
         ListShop activeListShop;
-        List<String> listShopNames;
+        List<String> names;
+
 
         if (data != null) {
-            if (data.equals("Close")) {
+            if (data.equals(CLOSE)) {
                 subscriber.setStepStatus(0);
                 subscriberService.save(subscriber);
-                execute(sendMessageService.editInlineMessage(update, TextMessage.CLOSED));
+                execute(sendMessageService.editInlineMessage(update, CLOSED));
 
                 //30 - user in menu of 'my lists'
-            } else if (subscriber.getStepStatus() == 30 && !data.equals(TextMessage.ADD)) {
+            } else if (data.equals(DELETE)) {
+                subscriber.setStepStatus(34);
+                subscriberService.save(subscriber);
+
+                names = getAllListShopNames(subscriber);
+                execute(sendMessageService.editInlineMessage(update, DELETE_LIST));
+                execute(inlineKeyButtonService.setInlineButtonForDelete(update, "Choose carefully!", names));
+
+            } else if (subscriber.getStepStatus() == 30 && !data.equals(ADD)) {
                 subscriber.setActiveList(listShopService.findByNameAndSubscriberId(data, subscriber).getId());
                 subscriber.setStepStatus(32);
                 subscriberService.save(subscriber);
 
-                listShopNames = getAllItemNamesByActiveList(subscriber);
+                names = getAllItemNamesByActiveList(subscriber);
                 execute(sendMessageService.editInlineMessage(update, "Selected " + data)); //TODO: надо понять как удалять сообщение
-                execute(inlineKeyButtonService.setInlineButton(update, data, listShopNames));
+                execute(inlineKeyButtonService.setInlineButtonAllButtons(update, data, names));
 
                 //user pressed add List
             } else if (subscriber.getStepStatus() == 30) {
                 subscriber.setStepStatus(31);
                 subscriberService.save(subscriber);
-                execute(sendMessageService.editInlineMessage(update, TextMessage.PRINT_NAME_LIST));
+                execute(sendMessageService.editInlineMessage(update, PRINT_NAME_LIST));
 
                 //32 - user pressed add Item
-            } else if (subscriber.getStepStatus() == 32 && data.equals("Add")) {
+            } else if (subscriber.getStepStatus() == 32 && data.equals(ADD)) {
                 subscriber.setStepStatus(33);
                 subscriberService.save(subscriber);
-                execute(sendMessageService.editInlineMessage(update, TextMessage.PRINT_NAME_ITEM));
+                execute(sendMessageService.editInlineMessage(update, PRINT_NAME_ITEM));
+
+            } else if (subscriber.getStepStatus() == 34) {
+                listShopService.deleteByNameAndSubscriber(data, subscriber);
+
+                names = getAllListShopNames(subscriber);
+                execute(sendMessageService.editInlineMessage(update, data + " has been deleted"));
+                execute(inlineKeyButtonService.setInlineButtonForDelete(update, "Choose carefully!", names));
             }
         } else if (text != null) {
 
@@ -187,8 +203,8 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
                 subscriber.setStepStatus(30);
                 subscriberService.save(subscriber);
 
-                listShopNames = getAllListShopNames(subscriber);
-                execute(inlineKeyButtonService.setInlineButton(update, TextMessage.SELECT_LIST, listShopNames));
+                names = getAllListShopNames(subscriber);
+                execute(inlineKeyButtonService.setInlineButtonAllButtons(update, SELECT_LIST, names));
 
                 //33 - user printed a name Item
             } else if (subscriber.getStepStatus() == 33) {
@@ -198,8 +214,8 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
                 subscriber.setStepStatus(32);
                 subscriberService.save(subscriber);
 
-                listShopNames = getAllItemNamesByActiveList(subscriber);
-                execute(inlineKeyButtonService.setInlineButton(update, update.getMessage().getText(), listShopNames));
+                names = getAllItemNamesByActiveList(subscriber);
+                execute(inlineKeyButtonService.setInlineButtonAllButtons(update, update.getMessage().getText(), names));
             }
         }
     }
@@ -213,11 +229,11 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
             if (checkingSubscriber != null) {
                 subscriber.setStepStatus(21);
                 subscriberService.save(subscriber);
-                execute(sendMessageService.createMessage(update, TextMessage.PRINT_NICKNAME));
+                execute(sendMessageService.createMessage(update, PRINT_NICKNAME));
             } else {
                 subscriber.setStepStatus(0);
                 subscriberService.save(subscriber);
-                execute(sendMessageService.createMessage(update, TextMessage.NOT_FOUND_NICKNAME));
+                execute(sendMessageService.createMessage(update, NOT_FOUND_NICKNAME));
             }
         } else if (subscriber.getStepStatus() == 21) {
             Contact contact = new Contact(subscriber, update.getMessage().getText(), subscriber.getUserName());
@@ -226,7 +242,7 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
             subscriber.setStepStatus(0);
             subscriberService.save(subscriber);
 
-            execute(sendMessageService.createMessage(update, TextMessage.ADDED_IN_YOUR_CONTACT_LIST));
+            execute(sendMessageService.createMessage(update, ADDED_IN_YOUR_CONTACT_LIST));
         }
     }
 
@@ -251,7 +267,7 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
 
         subscriber.setStepStatus(0);
         subscriberService.save(subscriber);
-        execute(sendMessageService.createMessage(update, TextMessage.WILL_CONTACT_YOU));
+        execute(sendMessageService.createMessage(update, WILL_CONTACT_YOU));
     }
 
     @Override

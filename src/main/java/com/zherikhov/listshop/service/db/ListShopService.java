@@ -6,6 +6,7 @@ import com.zherikhov.listshop.entity.Subscriber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -44,18 +45,6 @@ public class ListShopService {
         return repository.findAllBySubscriber(subscriber);
     }
 
-    public ListShop findByName(String name) {
-        logger.info("Search for listShop by name " + name);
-
-        ListShop listShop = null;
-        Optional<ListShop> optionalListShop = repository.findByName(name);
-
-        if (optionalListShop.isPresent()) {
-            listShop = optionalListShop.get();
-        }
-        return listShop;
-    }
-
     public ListShop findByNameAndSubscriberId(String name, Subscriber subscriber) {
         logger.info("Search for listShop by NAME and ID subscriber " + name + "," + subscriber.getId());
 
@@ -66,5 +55,12 @@ public class ListShopService {
             listShop = optionalListShop.get();
         }
         return listShop;
+    }
+
+    @Transactional
+    public void deleteByNameAndSubscriber(String name, Subscriber subscriber) {
+        logger.info(name + " was been deleted from " + subscriber);
+
+        repository.deleteByNameAndSubscriber(name, subscriber);
     }
 }

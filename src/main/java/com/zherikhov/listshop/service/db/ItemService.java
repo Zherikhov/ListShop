@@ -30,4 +30,11 @@ public class ItemService {
 
         return repository.findAllByListShop(listShop);
     }
+
+    public void deleteByNameAndListShop(String name, ListShop listShop) {
+        logger.info(name + " was been deleted from " + listShop.getId());
+
+        repository.deleteByNameAndListShop(name, listShop);
+    }
+
 }

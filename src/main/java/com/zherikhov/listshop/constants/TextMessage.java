@@ -2,10 +2,14 @@ package com.zherikhov.listshop.constants;
 
 public class TextMessage {
     public final static String CLOSED = "Closed";
+
     public final static String ADD = "Add";
+    public final static String DELETE = "Delete";
+    public final static String CLOSE = "Close";
 
     public final static String SELECT_LIST = "Please, select a list";
     public final static String PRINT_NAME_LIST = "Please, print a name list";
+    public final static String DELETE_LIST = "Next list will DELETE!";
 
     public final static String PRINT_NAME_ITEM = "Please, print a name item";
 

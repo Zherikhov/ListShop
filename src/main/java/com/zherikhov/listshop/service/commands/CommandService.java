@@ -15,7 +15,7 @@ public class CommandService {
     private final static String helloMessage = """
             Hello!
                                               
-            This app will help you create a shopping list and share it with your contacts, but the app is still under development and will be ready 01/03/24.
+            This app will help you create a shopping list and share it with your contacts, but the app is still under development and will be ready 01/04/24.
                                               
             Best wishes, Vlad.""";
 
@@ -24,7 +24,7 @@ public class CommandService {
         sendMessage.setParseMode(ParseMode.HTML);
 
         ReplyKeyboardMarkup keyboardMarkup =
-                customKeyboardButton.setButtons(customKeyboardButton.createKeyboardButtons(KeyboardsButtonNames.keyboardRows));
+                customKeyboardButton.setButtons(customKeyboardButton.createKeyboardButtons(KeyboardsButtonNames.KEYBOARD_BUTTON_NAMES));
 
         sendMessage.setReplyMarkup(keyboardMarkup);
         return sendMessage;

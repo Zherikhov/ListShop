@@ -9,18 +9,27 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import java.util.List;
 
 public class InlineKeyButtonService {
-    CustomInlineKeyButton inlineKeyButtons = new CustomInlineKeyButton();
-    SendMessageService sendMessageController = new SendMessageService();
-    InlineKeyboardMarkup keyboardMarkup;
+    private final CustomInlineKeyButton customInlineKeyButton = new CustomInlineKeyButton();
+    private final SendMessageService sendMessageController = new SendMessageService();
+    private InlineKeyboardMarkup keyboardMarkup;
 
-    public SendMessage setInlineButton(Update update, String text, List<String> names) {
+    public SendMessage setInlineButtonAllButtons(Update update, String text, List<String> names) {
 
         SendMessage sendMessage = sendMessageController.createMessage(update, text);
         keyboardMarkup =
-                inlineKeyButtons.setKeyboardMarkup(inlineKeyButtons.createInlineButton(names));
-
+                customInlineKeyButton.setKeyboardMarkup(customInlineKeyButton.createInlineButton(names));
         sendMessage.setReplyMarkup(keyboardMarkup);
+
         return sendMessage;
     }
 
+    public SendMessage setInlineButtonForDelete(Update update, String text, List<String> names) {
+
+        SendMessage sendMessage = sendMessageController.createMessage(update, text);
+        keyboardMarkup =
+                customInlineKeyButton.setKeyboardMarkup(customInlineKeyButton.createInlineButtonForDelete(names));
+        sendMessage.setReplyMarkup(keyboardMarkup);
+
+        return sendMessage;
+    }
 }
