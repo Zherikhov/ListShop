@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.util.Objects;
 import java.util.Properties;
 
-public class Resources {
+public class ResourcesUtil {
 
     public static String getProperties(String path, String variable) {
         String configPath = Objects.requireNonNull(Thread.currentThread().getContextClassLoader().getResource(path)).getPath();

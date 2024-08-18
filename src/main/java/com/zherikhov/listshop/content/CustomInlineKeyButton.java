@@ -10,7 +10,48 @@ import static com.zherikhov.listshop.constants.TextMessage.*;
 
 public class CustomInlineKeyButton {
 
-    public List<List<InlineKeyboardButton>> createInlineButton(List<String> buttonsNames) {
+    public List<List<InlineKeyboardButton>> createInlineButtonWithShare(List<String> buttonsNames) {
+        List<List<InlineKeyboardButton>> keyboardList = new ArrayList<>();
+
+        for (String buttonName : buttonsNames) {
+            List<InlineKeyboardButton> keyboardRow = new ArrayList<>();
+
+            keyboardRow.add(new InlineKeyboardButton());
+            keyboardRow.getFirst().setText(buttonName);
+            keyboardRow.getFirst().setCallbackData("name:" + buttonName);
+
+            keyboardRow.add(new InlineKeyboardButton());
+            keyboardRow.getLast().setText("share");
+            keyboardRow.getLast().setCallbackData("name:" + "share");
+
+            keyboardList.add(keyboardRow);
+        }
+
+        List<InlineKeyboardButton> newButtonRow = new ArrayList<>();
+
+        newButtonRow.add(new InlineKeyboardButton());
+        newButtonRow.getFirst().setText(CREATE_BUTTON);
+        newButtonRow.getFirst().setCallbackData("function:" + CREATE_BUTTON);
+        keyboardList.add(newButtonRow);
+
+        List<InlineKeyboardButton> deleteButtonRow = new ArrayList<>();
+
+        deleteButtonRow.add(new InlineKeyboardButton());
+        deleteButtonRow.getFirst().setText(DELETE_BUTTON);
+        deleteButtonRow.getFirst().setCallbackData("function:" + DELETE_BUTTON);
+        keyboardList.add(deleteButtonRow);
+
+        List<InlineKeyboardButton> cancelButtonRow = new ArrayList<>();
+
+        cancelButtonRow.add(new InlineKeyboardButton());
+        cancelButtonRow.getFirst().setText(CANCEL_BUTTON);
+        cancelButtonRow.getFirst().setCallbackData("function:" + CANCEL_BUTTON);
+        keyboardList.add(cancelButtonRow);
+
+        return keyboardList;
+    }
+
+    public List<List<InlineKeyboardButton>> createInlineButtonWithoutShare(List<String> buttonsNames) {
         List<List<InlineKeyboardButton>> keyboardList = new ArrayList<>();
 
         for (String buttonName : buttonsNames) {
@@ -26,22 +67,22 @@ public class CustomInlineKeyButton {
         List<InlineKeyboardButton> newButtonRow = new ArrayList<>();
 
         newButtonRow.add(new InlineKeyboardButton());
-        newButtonRow.getFirst().setText("➕");
-        newButtonRow.getFirst().setCallbackData("function:" + ADD);
+        newButtonRow.getFirst().setText(CREATE_BUTTON);
+        newButtonRow.getFirst().setCallbackData("function:" + CREATE_BUTTON);
         keyboardList.add(newButtonRow);
 
         List<InlineKeyboardButton> deleteButtonRow = new ArrayList<>();
 
         deleteButtonRow.add(new InlineKeyboardButton());
-        deleteButtonRow.getFirst().setText("❌");
-        deleteButtonRow.getFirst().setCallbackData("function:" + DELETE);
+        deleteButtonRow.getFirst().setText(DELETE_BUTTON);
+        deleteButtonRow.getFirst().setCallbackData("function:" + DELETE_BUTTON);
         keyboardList.add(deleteButtonRow);
 
         List<InlineKeyboardButton> cancelButtonRow = new ArrayList<>();
 
         cancelButtonRow.add(new InlineKeyboardButton());
-        cancelButtonRow.getFirst().setText(CLOSE);
-        cancelButtonRow.getFirst().setCallbackData("function:" + CLOSE);
+        cancelButtonRow.getFirst().setText(CANCEL_BUTTON);
+        cancelButtonRow.getFirst().setCallbackData("function:" + CANCEL_BUTTON);
         keyboardList.add(cancelButtonRow);
 
         return keyboardList;
@@ -63,8 +104,8 @@ public class CustomInlineKeyButton {
         List<InlineKeyboardButton> deleteButtonRow = new ArrayList<>();
 
         deleteButtonRow.add(new InlineKeyboardButton());
-        deleteButtonRow.getFirst().setText(CLOSE);
-        deleteButtonRow.getFirst().setCallbackData("function:" + CLOSE);
+        deleteButtonRow.getFirst().setText(CANCEL);
+        deleteButtonRow.getFirst().setCallbackData("function:" + CANCEL);
         keyboardList.add(deleteButtonRow);
 
         return keyboardList;

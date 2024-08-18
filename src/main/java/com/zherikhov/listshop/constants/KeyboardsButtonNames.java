@@ -6,7 +6,7 @@ public class KeyboardsButtonNames {
 
     private static final List<String> KEYBOARD_ROW_FIRST = List.of(
             "My lists",
-            "Add a contact"
+            "Contacts"
     );
 
     private static final List<String> KEYBOARD_ROW_SECOND = List.of(
@@ -17,5 +17,12 @@ public class KeyboardsButtonNames {
     public static final List<List<String>> KEYBOARD_BUTTON_NAMES = List.of(
             KEYBOARD_ROW_FIRST,
             KEYBOARD_ROW_SECOND
+    );
+
+    public static final List<String> CONTACTS_INLINE_BUTTONS = List.of(
+            "Add contact",
+            "My contacts",
+            "Rename contact",
+            "Delete contact"
     );
 }

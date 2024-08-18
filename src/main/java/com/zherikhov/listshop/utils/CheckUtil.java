@@ -5,7 +5,7 @@ import org.telegram.telegrambots.meta.api.objects.MessageEntity;
 
 import java.util.Optional;
 
-public class Check {
+public class CheckUtil {
 
     public static String checkCommand(Message message) {
         String command = null;

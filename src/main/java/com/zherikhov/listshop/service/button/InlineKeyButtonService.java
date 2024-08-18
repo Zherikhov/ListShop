@@ -13,11 +13,21 @@ public class InlineKeyButtonService {
     private final SendMessageService sendMessageController = new SendMessageService();
     private InlineKeyboardMarkup keyboardMarkup;
 
-    public SendMessage setInlineButtonAllButtons(Update update, String text, List<String> names) {
+    public SendMessage setInlineButtonAllButtonsWithShare(Update update, String text, List<String> names) {
 
         SendMessage sendMessage = sendMessageController.createMessage(update, text);
         keyboardMarkup =
-                customInlineKeyButton.setKeyboardMarkup(customInlineKeyButton.createInlineButton(names));
+                customInlineKeyButton.setKeyboardMarkup(customInlineKeyButton.createInlineButtonWithShare(names));
+        sendMessage.setReplyMarkup(keyboardMarkup);
+
+        return sendMessage;
+    }
+
+    public SendMessage setInlineButtonAllButtonsWithoutShare(Update update, String text, List<String> names) {
+
+        SendMessage sendMessage = sendMessageController.createMessage(update, text);
+        keyboardMarkup =
+                customInlineKeyButton.setKeyboardMarkup(customInlineKeyButton.createInlineButtonWithoutShare(names));
         sendMessage.setReplyMarkup(keyboardMarkup);
 
         return sendMessage;

@@ -11,14 +11,12 @@ import com.zherikhov.listshop.service.db.ItemService;
 import com.zherikhov.listshop.service.db.ListShopService;
 import com.zherikhov.listshop.service.db.SubscriberService;
 import com.zherikhov.listshop.service.sender.SendMessageService;
-import com.zherikhov.listshop.utils.Check;
-import com.zherikhov.listshop.utils.Resources;
-import com.zherikhov.listshop.utils.TextFormat;
+import com.zherikhov.listshop.utils.CheckUtil;
+import com.zherikhov.listshop.utils.ResourcesUtil;
+import com.zherikhov.listshop.utils.TextFormatUtil;
 import lombok.SneakyThrows;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.User;
@@ -42,6 +40,7 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
     private final InlineKeyButtonService inlineKeyButtonService = new InlineKeyButtonService();
 
     private User user = null;
+    Subscriber checkingSubscriber = null;
 
     public TelegramBotApplication(String botToken,
                                   SubscriberService service,
@@ -69,23 +68,23 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
         Subscriber subscriber = subscriberService.findById(user.getId());
 
         if (subscriber != null) {
-            if ((update.hasMessage() && update.getMessage().hasText() || update.hasCallbackQuery()) && subscriber.getStepStatus() > 29 && subscriber.getStepStatus() < 40) {
+            if ((update.hasMessage() && update.getMessage().hasText() || update.hasCallbackQuery()) && subscriber.getStepStatus() >= 300 && subscriber.getStepStatus() < 400) {
                 makeList(update, subscriber);
                 return;
             }
 
-            if (update.hasMessage() && update.getMessage().hasText() && subscriber.getStepStatus() > 19 && subscriber.getStepStatus() < 30) {
-                addContact(update, subscriber);
+            if ((update.hasMessage() && update.getMessage().hasText() || update.hasCallbackQuery()) && subscriber.getStepStatus() >= 200 && subscriber.getStepStatus() < 300) {
+                contacts(update, subscriber);
                 return;
             }
 
-            if (update.hasMessage() && update.getMessage().hasText() && subscriber.getStepStatus() > 9 && subscriber.getStepStatus() < 20) {
+            if (update.hasMessage() && update.getMessage().hasText() && subscriber.getStepStatus() >= 100 && subscriber.getStepStatus() < 200) {
                 feedback(update, subscriber);
                 return;
             }
         }
 
-        String command = Check.checkCommand(update.getMessage());
+        String command = CheckUtil.checkCommand(update.getMessage());
         if (command != null) {
             switch (command) {
                 case "/start" -> {
@@ -105,33 +104,26 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
             return;
         }
 
-        /*
-          reserved statuses
-          0 - beginner
-          10 - 19 - Feedback
-          20 - 29 - Add a contact
-          30 - 39 - Make a list
-         */
         if (update.hasMessage() && update.getMessage().hasText()) {
             switch (update.getMessage().getText()) {
                 case "My lists" -> {
                     logger.info("My lists " + user.getId() + " " + user.getUserName());
 
-                    Objects.requireNonNull(subscriber).setStepStatus(30);
+                    Objects.requireNonNull(subscriber).setStepStatus(300);
                     subscriberService.save(subscriber);
-                    execute(inlineKeyButtonService.setInlineButtonAllButtons(update, SELECT_LIST, getAllListShopNames(subscriber)));
+                    execute(inlineKeyButtonService.setInlineButtonAllButtonsWithShare(update, SELECT_LIST, getAllListShopNames(subscriber)));
                 }
-                case "Add a contact" -> {
+                case "Contacts" -> {
                     logger.info("Add a contact " + user.getId() + " " + user.getUserName());
 
-                    Objects.requireNonNull(subscriber).setStepStatus(20);
+                    Objects.requireNonNull(subscriber).setStepStatus(200);
                     subscriberService.save(subscriber);
-                    execute(sendMessageService.createMessage(update, PRINT_YOUR_CONTACT));
+                    execute(inlineKeyButtonService.setInlineButtonAllButtonsWithoutShare(update, MY_CONTACTS, getAllContacts(subscriber)));
                 }
                 case "Feedback" -> {
                     logger.info("Feedback " + user.getId() + " " + user.getUserName());
 
-                    Objects.requireNonNull(subscriber).setStepStatus(10);
+                    Objects.requireNonNull(subscriber).setStepStatus(100);
                     subscriberService.save(subscriber);
                     execute(sendMessageService.createMessage(update, WRITE_YOUR_FEEDBACK));
                 }
@@ -154,97 +146,167 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
 
 
         if (data != null) {
-            if (data.equals(CLOSE)) {
+            //просто отмена
+            if (data.equals(CANCEL)) { // ✔️
                 subscriber.setStepStatus(0);
+                subscriber.setActiveList(0);
                 subscriberService.save(subscriber);
-                execute(sendMessageService.editInlineMessage(update, CLOSED));
+                execute(sendMessageService.editInlineMessage(update, CANCELED));
 
-                //30 - user in menu of 'my lists'
-            } else if (data.equals(DELETE)) {
-                subscriber.setStepStatus(34);
-                subscriberService.save(subscriber);
+            } else if (subscriber.getStepStatus() == 300) {
+                //подготовка к удалению списка
+                if (data.equals(DELETE_BUTTON)) {
+                    subscriber.setStepStatus(331);
+                    subscriberService.save(subscriber);
 
-                names = getAllListShopNames(subscriber);
-                execute(sendMessageService.editInlineMessage(update, DELETE_LIST));
-                execute(inlineKeyButtonService.setInlineButtonForDelete(update, "Choose carefully!", names));
+                    names = getAllListShopNames(subscriber);
+                    execute(sendMessageService.editInlineMessage(update, DELETE_LIST));
+                    execute(inlineKeyButtonService.setInlineButtonForDelete(update, "Choose carefully!", names));
 
-            } else if (subscriber.getStepStatus() == 30 && !data.equals(ADD)) {
-                subscriber.setActiveList(listShopService.findByNameAndSubscriberId(data, subscriber).getId());
-                subscriber.setStepStatus(32);
-                subscriberService.save(subscriber);
+                    //подготовка к созданию нового списка
+                } else if (data.equals(CREATE_BUTTON)) {
+                    subscriber.setStepStatus(311);
+                    subscriberService.save(subscriber);
+                    execute(sendMessageService.editInlineMessage(update, PRINT_NAME_LIST));
 
-                names = getAllItemNamesByActiveList(subscriber);
-                execute(sendMessageService.editInlineMessage(update, "Selected " + data)); //TODO: надо понять как удалять сообщение
-                execute(inlineKeyButtonService.setInlineButtonAllButtons(update, data, names));
+                    //выбор списка для отображения внутренних элементов
+                } else {
+                    subscriber.setActiveList(listShopService.findByNameAndSubscriberId(data, subscriber).getId());
+                    subscriber.setStepStatus(341);
+                    subscriberService.save(subscriber);
 
-                //user pressed add List
-            } else if (subscriber.getStepStatus() == 30) {
-                subscriber.setStepStatus(31);
-                subscriberService.save(subscriber);
-                execute(sendMessageService.editInlineMessage(update, PRINT_NAME_LIST));
+                    names = getAllItemNamesByActiveList(subscriber);
+                    execute(sendMessageService.editInlineMessage(update, "Selected " + data)); //TODO: надо понять как удалять сообщение
+                    execute(inlineKeyButtonService.setInlineButtonAllButtonsWithoutShare(update, data, names));
+                }
 
-                //32 - user pressed add Item
-            } else if (subscriber.getStepStatus() == 32 && data.equals(ADD)) {
-                subscriber.setStepStatus(33);
+                //подготовка к созданию элемента списка
+            } else if (subscriber.getStepStatus() == 341 && data.equals(CREATE_BUTTON)) {
+                subscriber.setStepStatus(312);
                 subscriberService.save(subscriber);
                 execute(sendMessageService.editInlineMessage(update, PRINT_NAME_ITEM));
 
-            } else if (subscriber.getStepStatus() == 34) {
+                //подготовка к удалению элемента списка
+            } else if (subscriber.getStepStatus() == 341 && data.equals(DELETE_BUTTON)) {
+                subscriber.setStepStatus(332);
+                subscriberService.save(subscriber);
+
+                names = getAllItemNamesByActiveList(subscriber);
+                execute(sendMessageService.editInlineMessage(update, DELETE_ITEM));
+                execute(inlineKeyButtonService.setInlineButtonForDelete(update, "Choose carefully!", names));
+
+                //удаление списка
+            } else if (subscriber.getStepStatus() == 331) {
+                ListShop listShop = listShopService.findByNameAndSubscriberId(data, subscriber);
+                itemService.deleteByListShop(listShop);
                 listShopService.deleteByNameAndSubscriber(data, subscriber);
 
                 names = getAllListShopNames(subscriber);
                 execute(sendMessageService.editInlineMessage(update, data + " has been deleted"));
                 execute(inlineKeyButtonService.setInlineButtonForDelete(update, "Choose carefully!", names));
+
+                //удаление элемента списка
+            } else if (subscriber.getStepStatus() == 332) {
+                ListShop listShop = listShopService.findById(subscriber.getActiveList());
+                itemService.deleteByNameAndListShop(data, listShop);
+                subscriber.setStepStatus(341);
+
+                names = getAllItemNamesByActiveList(subscriber);
+                execute(sendMessageService.editInlineMessage(update, data + " has been deleted"));
+                execute(inlineKeyButtonService.setInlineButtonAllButtonsWithoutShare(update, data, names));
             }
         } else if (text != null) {
-
-            //31 - user printed a name List
-            if (subscriber.getStepStatus() == 31) {
+            //создание нового списка
+            if (subscriber.getStepStatus() == 311) {
                 listShopService.save(new ListShop(subscriber, text));
 
-                subscriber.setStepStatus(30);
+                subscriber.setStepStatus(300);
                 subscriberService.save(subscriber);
 
                 names = getAllListShopNames(subscriber);
-                execute(inlineKeyButtonService.setInlineButtonAllButtons(update, SELECT_LIST, names));
+                execute(inlineKeyButtonService.setInlineButtonAllButtonsWithoutShare(update, SELECT_LIST, names));
 
-                //33 - user printed a name Item
-            } else if (subscriber.getStepStatus() == 33) {
+                //создание нового элемента списка
+            } else if (subscriber.getStepStatus() == 312) {
                 activeListShop = listShopService.findById(subscriber.getActiveList());
                 itemService.save(new Item(activeListShop, update.getMessage().getText()));
 
-                subscriber.setStepStatus(32);
+                subscriber.setStepStatus(341);
                 subscriberService.save(subscriber);
 
                 names = getAllItemNamesByActiveList(subscriber);
-                execute(inlineKeyButtonService.setInlineButtonAllButtons(update, update.getMessage().getText(), names));
+                execute(inlineKeyButtonService.setInlineButtonAllButtonsWithoutShare(update, update.getMessage().getText(), names));
             }
         }
     }
 
     @SneakyThrows
-    public void addContact(Update update, Subscriber subscriber) {
-        if (subscriber.getStepStatus() == 20) {
-            String userName = TextFormat.userNameFormat(update.getMessage().getText());
-            Subscriber checkingSubscriber = subscriberService.findByUserName(userName);
+    public void contacts(Update update, Subscriber subscriber) {
+        String data = update.hasCallbackQuery() ? update.getCallbackQuery().getData().split(":")[1] : null;
+        String text = update.hasMessage() ? update.getMessage().getText() : null;
 
-            if (checkingSubscriber != null) {
-                subscriber.setStepStatus(21);
-                subscriberService.save(subscriber);
-                execute(sendMessageService.createMessage(update, PRINT_NICKNAME));
-            } else {
+        int stepStatus = subscriber.getStepStatus();
+        List<String> names;
+
+        if (data != null) {
+            switch (data) {
+                case CANCEL -> {
+                    subscriber.setStepStatus(0);
+                    subscriberService.save(subscriber);
+                    execute(sendMessageService.editInlineMessage(update, CANCELED));
+                }
+                case CREATE_BUTTON -> {
+                    subscriber.setStepStatus(211);
+                    subscriberService.save(subscriber);
+                    execute(sendMessageService.editInlineMessage(update, PRINT_YOUR_CONTACT));
+                }
+                case EDIT_BUTTON -> {
+                    subscriber.setStepStatus(221);
+                    subscriberService.save(subscriber);
+                    execute(sendMessageService.createMessage(update, "crutch"));
+                }
+                case DELETE_BUTTON -> {
+                    subscriber.setStepStatus(231);
+                    subscriberService.save(subscriber);
+                    execute(sendMessageService.editInlineMessage(update, DELETE_CONTACT));
+
+                    names = getAllContacts(subscriber);
+                    execute(inlineKeyButtonService.setInlineButtonForDelete(update, "Choose carefully!", names));
+                }
+                default -> {
+                    if (stepStatus == 231) {
+                        contactService.deleteBySubscriberAndNickName(subscriber, data);
+                        execute(sendMessageService.editInlineMessage(update, "Done!"));
+
+                        subscriber.setStepStatus(0);
+                        subscriberService.save(subscriber);
+                    }
+                }
+            }
+
+        } else if (text != null) {
+            String contactUserName = TextFormatUtil.userNameFormat(update.getMessage().getText());
+
+            if (stepStatus == 211) {
+                checkingSubscriber = subscriberService.findByUserName(contactUserName);
+                if (checkingSubscriber != null) {
+                    subscriber.setStepStatus(212);
+                    subscriberService.save(subscriber);
+                    execute(sendMessageService.createMessage(update, PRINT_NICKNAME));
+                } else {
+                    subscriber.setStepStatus(0);
+                    subscriberService.save(subscriber);
+                    execute(sendMessageService.createMessage(update, NOT_FOUND_NICKNAME));
+                }
+            } else if (stepStatus == 212) {
+                Contact contact = new Contact(subscriber, text, checkingSubscriber.getUserName());
+                contactService.save(contact);
+
                 subscriber.setStepStatus(0);
                 subscriberService.save(subscriber);
-                execute(sendMessageService.createMessage(update, NOT_FOUND_NICKNAME));
+
+                execute(sendMessageService.createMessage(update, ADDED_IN_YOUR_CONTACT_LIST));
             }
-        } else if (subscriber.getStepStatus() == 21) {
-            Contact contact = new Contact(subscriber, update.getMessage().getText(), subscriber.getUserName());
-            contactService.save(contact);
-
-            subscriber.setStepStatus(0);
-            subscriberService.save(subscriber);
-
-            execute(sendMessageService.createMessage(update, ADDED_IN_YOUR_CONTACT_LIST));
         }
     }
 
@@ -263,6 +325,15 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
         return listShopNames;
     }
 
+    private List<String> getAllContacts(Subscriber subscriber) {
+        List<String> listShopNames = new ArrayList<>();
+        List<Contact> listShops = contactService.getAllBySubscriber(subscriber);
+        for (Contact i : listShops) {
+            listShopNames.add(i.getNickName());
+        }
+        return listShopNames;
+    }
+
     @SneakyThrows
     public void feedback(Update update, Subscriber subscriber) {
         execute(sendMessageService.createMessageForSupport(update.getMessage().getText()));
@@ -274,6 +345,6 @@ public class TelegramBotApplication extends TelegramLongPollingBot {
 
     @Override
     public String getBotUsername() {
-        return Resources.getProperties("application.secure.properties", "telegram.name");
+        return ResourcesUtil.getProperties("application.secure.properties", "telegram.name");
     }
 }

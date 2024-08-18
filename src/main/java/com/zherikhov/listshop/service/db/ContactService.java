@@ -2,15 +2,15 @@ package com.zherikhov.listshop.service.db;
 
 import com.zherikhov.listshop.dao.ContactRepository;
 import com.zherikhov.listshop.entity.Contact;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.zherikhov.listshop.entity.Subscriber;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
+import java.util.List;
 
 @Service
+@Transactional
 public class ContactService {
-    Logger logger = LoggerFactory.getLogger(ContactService.class);
 
     private final ContactRepository repository;
 
@@ -19,20 +19,14 @@ public class ContactService {
     }
 
     public void save(Contact contact) {
-        logger.info("Contact " + contact.getNickName() + "has been saved");
-
         repository.save(contact);
     }
 
-    public Contact findById(int id) {
-        logger.info("Search for a contact by ID " + id);
+    public List<Contact> getAllBySubscriber(Subscriber subscriber) {
+        return repository.findAllBySubscriber(subscriber);
+    }
 
-        Contact subscriber = null;
-        Optional<Contact> optionalSubscriber = repository.findById(id);
-
-        if (optionalSubscriber.isPresent()) {
-            subscriber = optionalSubscriber.get();
-        }
-        return subscriber;
+    public void deleteBySubscriberAndNickName(Subscriber subscriber, String nickName) {
+        repository.deleteBySubscriberAndNickName(subscriber, nickName);
     }
 }
